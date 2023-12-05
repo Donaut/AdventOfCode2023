@@ -66,6 +66,8 @@
                 }
             }
 
+            
+
             var last = games.Last();
             var second = instanceCounts.Where(x => x.Key <= last.Id).Sum(x => x.Value);
             ;
