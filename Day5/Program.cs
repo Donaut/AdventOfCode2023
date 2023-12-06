@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Numerics;
+using System.Runtime.CompilerServices;
 
 namespace Day5
 {
@@ -135,17 +136,11 @@ namespace Day5
                 var start = range[0];
                 var length = range[1];
 
-                var buffer = new long[length];
+                return EnumerableExtensions.Range(start, length);
+            }).AsParallel().Select(seed => SeedNumberToLocation(seed, convertTables)).Min();
 
-                for(var i = 0; i < length; i++)
-                {
-                    buffer[i] = start + i;
-                }
-                
-                return buffer;
-            }).Select(seed => SeedNumberToLocation(seed, convertTables));
-
-            var secondQuestion = secondQuestionQuery.Min();
+            Console.WriteLine(secondQuestionQuery);
+            Console.ReadLine();
 
             ;
 
@@ -179,5 +174,17 @@ namespace Day5
         public long SourceRangeStart { get; set; }
 
         public long Length { get; set; }
+    }
+
+    static class EnumerableExtensions
+    {
+        public static IEnumerable<long> Range(long start, long count)
+        {
+            for (long i = start; i < start + count; i++)
+            {
+                yield return i;
+            }
+            
+        }
     }
 }
