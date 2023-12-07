@@ -1,6 +1,7 @@
 ﻿using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Day7
 {
@@ -18,6 +19,8 @@ namespace Day7
             //    QQQJA 483
             //    """.Split("\r\n");
 
+            var startTime = Stopwatch.GetTimestamp();
+
             var games = lines.Select(x =>
                 {
                     var line = x.Split(' ');
@@ -30,6 +33,8 @@ namespace Day7
                 .OrderBy(x => x.Hand, GameComparer.Default);
 
             var question = games.Select((x, i) => x.Bid * (i + 1)).Sum();
+
+            Console.WriteLine($"Elapsed: {Stopwatch.GetElapsedTime(startTime)}");
 
             var success = question == 251135960;
 
@@ -54,7 +59,7 @@ namespace Day7
 
             public GameComparer()
             {
-                _characterArray = new[] { 'A', 'K', 'Q', 'T', '9', '8', '7', '6', '5', '4', '3', '2', 'J' };
+                _characterArray = ['A', 'K', 'Q', 'T', '9', '8', '7', '6', '5', '4', '3', '2', 'J'];
                 Array.Reverse(_characterArray); // Too lazy to flip the letters
                 _characterTable = _characterArray.ToDictionary(x => x, y => Array.IndexOf(_characterArray, y) + 1);
             }
@@ -67,6 +72,8 @@ namespace Day7
                     return -1;
                 else if(second == null)
                     return 1;
+
+                if(first.Length != second.Length) throw new ArgumentException($"x length and y length has to be equal");
 
                 var jokerFirst = FindBestJoker(first);
                 var jokerSecond = FindBestJoker(second);
@@ -151,12 +158,52 @@ namespace Day7
 
             private int CompareCategory(string x, string y)
             {
-                var xCounts = x.GroupBy(x => x).Select(x => new { Char = x.Key, Count = x.Count() }).ToArray();
-                var yCounts = y.GroupBy(x => x).Select(x => new { Char = x.Key, Count = x.Count() }).ToArray();
+                // Causing a hotpath
+                //var xCounts = x.GroupBy(x => x).Select(x => new { Char = x.Key, Count = x.Count() }).ToArray();
+                //var yCounts = y.GroupBy(x => x).Select(x => new { Char = x.Key, Count = x.Count() }).ToArray();
+
+                // This is the same but faster.
+                var xCharsLength = 0;
+                Span<char> xChars = stackalloc char[5];
+                Span<int> xCharCounts = stackalloc int[5];
+
+                for (int i = 0; i < x.Length; i++)
+                {
+                    var character = x[i];
+                    var index = xChars.IndexOf(character);
+                    if(index >= 0 )
+                    {
+                        xCharCounts[index]++;
+                        continue;
+                    }
+
+                    xChars[xCharsLength] = character;
+                    xCharCounts[xCharsLength] = 1;
+                    xCharsLength++;
+                }
+
+                var yCharsLength = 0;
+                Span<char> yChars = stackalloc char[5];
+                Span<int> yCharCounts = stackalloc int[5];
+
+                for(var i = 0; i < y.Length; i++)
+                {
+                    var character = y[i];
+                    var index = yCharCounts.IndexOf(character);
+                    if(index >= 0)
+                    {
+                        yCharCounts[index]++;
+                        continue;
+                    }
+                    yChars[yCharsLength] = character;
+                    yCharCounts[yCharsLength] = 1;
+                    yCharsLength++;
+                }
+
 
                 {
-                    var firstIsFiveOfAKind = xCounts.Length == 1;
-                    var secondIsFiveOfAKind = yCounts.Length == 1;
+                    var firstIsFiveOfAKind = xCharsLength == 1;
+                    var secondIsFiveOfAKind = yCharsLength == 1;
 
                     if (firstIsFiveOfAKind && !secondIsFiveOfAKind)
                         return 1;
@@ -165,8 +212,8 @@ namespace Day7
                 }
 
                 {
-                    var xIsFourOfAKind = xCounts.Any(x => x.Count == 4);
-                    var yIsFourOfAKind = yCounts.Any(x => x.Count == 4);
+                    var xIsFourOfAKind = xCharCounts.Contains(4);
+                    var yIsFourOfAKind = yCharCounts.Contains(4); ;
 
                     if (xIsFourOfAKind && !yIsFourOfAKind)
                         return 1;
@@ -175,8 +222,8 @@ namespace Day7
                 }
 
                 {
-                    var xIsFullHouse = xCounts.Any(x => x.Count == 3) && xCounts.Length == 2;
-                    var yIsFullHouse = yCounts.Any(x => x.Count == 3) && yCounts.Length == 2;
+                    var xIsFullHouse = xCharCounts.Contains(3) && xCharsLength == 2;
+                    var yIsFullHouse = yCharCounts.Contains(3) && yCharsLength == 2;
 
                     if (xIsFullHouse && !yIsFullHouse)
                         return 1;
@@ -186,8 +233,8 @@ namespace Day7
 
 
                 {
-                    var xIsThreeOfAKind = xCounts.Any(x => x.Count == 3) && xCounts.Length == 3;
-                    var yIsThreeOfAKind = yCounts.Any(x => x.Count == 3) && yCounts.Length == 3;
+                    var xIsThreeOfAKind = xCharCounts.Contains(3) && xCharsLength == 3;
+                    var yIsThreeOfAKind = yCharCounts.Contains(3) && yCharsLength == 3;
 
                     if (xIsThreeOfAKind && !yIsThreeOfAKind)
                         return 1;
@@ -196,8 +243,8 @@ namespace Day7
                 }
 
                 {
-                    var xIsTwoPair = xCounts.Count(x => x.Count == 2) == 2;
-                    var yIsTwoPair = yCounts.Count(y => y.Count == 2) == 2;
+                    var xIsTwoPair = xCharCounts.Count(2) == 2;
+                    var yIsTwoPair = yCharCounts.Count(2) == 2;
 
                     if (xIsTwoPair && !yIsTwoPair)
                         return 1;
@@ -207,8 +254,8 @@ namespace Day7
                 }
 
                 {
-                    var xIsOnePair = xCounts.Count(x => x.Count == 2) == 1;
-                    var yIsOnePair = yCounts.Count(x => x.Count == 2) == 1;
+                    var xIsOnePair = xCharCounts.Count(2) == 1;
+                    var yIsOnePair = yCharCounts.Count(2) == 1;
 
                     if (xIsOnePair && !yIsOnePair)
                         return 1;
@@ -217,8 +264,8 @@ namespace Day7
                 }
 
                 {
-                    var xIsHighCard = xCounts.Length == 5;
-                    var yIsHighCard = yCounts.Length == 5;
+                    var xIsHighCard = xCharsLength == 5;
+                    var yIsHighCard = yCharsLength == 5;
 
                     if (xIsHighCard && !yIsHighCard)
                         return 1;
