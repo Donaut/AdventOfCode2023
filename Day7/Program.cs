@@ -52,11 +52,6 @@ namespace Day7
 
             private readonly char[] _characterArray;
 
-            /// <summary>
-            /// Used for deciding the sort order for whole cards.
-            /// </summary>
-            //private readonly Dictionary<string, int> _cardTable;
-
             public GameComparer()
             {
                 _characterArray = ['A', 'K', 'Q', 'T', '9', '8', '7', '6', '5', '4', '3', '2', 'J'];
@@ -73,7 +68,7 @@ namespace Day7
                 else if(second == null)
                     return 1;
 
-                if(first.Length != second.Length) throw new ArgumentException($"x length and y length has to be equal");
+                if(first.Length != second.Length) throw new ArgumentException("x length and y length has to be equal");
 
                 var jokerFirst = FindBestJoker(first);
                 var jokerSecond = FindBestJoker(second);
